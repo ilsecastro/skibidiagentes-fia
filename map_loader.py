@@ -1,135 +1,116 @@
+import pygame
 import csv
-import os
-import tkinter as tk
-from tkinter import filedialog, messagebox
+from tkinter import filedialog, Tk
 
 # Función para cargar el archivo de mapa
 def cargar_mapa(archivo, delimitador):
     mapa = []
-    
     try:
         with open(archivo, newline='') as archivo_texto:
             lector = csv.reader(archivo_texto, delimiter=delimitador)
             for fila in lector:
-                try:
-                    mapa.append([int(celda) for celda in fila])
-                except ValueError:
-                    messagebox.showerror("Error", f"No se pudo convertir una celda a entero en {fila}")
-                    return None
+                mapa.append([int(celda) for celda in fila])
     except FileNotFoundError:
-        messagebox.showerror("Error", f"El archivo {archivo} no se encontró.")
+        print(f"El archivo {archivo} no se encontró.")
         return None
     except Exception as e:
-        messagebox.showerror("Error", f"Error al leer el archivo: {e}")
+        print(f"Error al leer el archivo: {e}")
         return None
     return mapa
-    
-   
 
 # Función para abrir el cuadro de diálogo y cargar el archivo
 def seleccionar_archivo():
+    root = Tk()
+    root.withdraw()  # Oculta la ventana principal de Tkinter
     archivo = filedialog.askopenfilename(
         title="Selecciona archivo",
         filetypes=[("Archivos de texto", "*.txt"), ("Archivos CSV", "*.csv")]
     )
+    root.destroy()  # Destruye la ventana después de seleccionar el archivo
+    return archivo
 
-    if archivo:
-        # Determinar el delimitador basado en la extensión del archivo
-        extension = os.path.splitext(archivo)[1]
-        delimitador = ',' if extension == '.csv' else ' '
-        
-        # Cargar el archivo seleccionado
-        mapa = cargar_mapa(archivo, delimitador=delimitador)
-        if mapa:
-            ventana_mapa(mapa)
+# Función para dibujar el mapa en la ventana de Pygame
+def dibujar_mapa(screen, mapa, cell_size):
+    colores = {
+        0: (128, 128, 128),  # Gris
+        1: (255, 255, 255),  # Blanco
+        2: (0, 0, 255),      # Azul
+        3: (255, 255, 0),    # Amarillo
+        4: (0, 255, 0),      # Verde
+    }
+    for y, fila in enumerate(mapa):
+        for x, celda in enumerate(fila):
+            color = colores.get(celda, (0, 0, 0))  # Color negro por defecto
+            pygame.draw.rect(screen, color, pygame.Rect(x * cell_size, y * cell_size, cell_size, cell_size))
 
-def ventana_mapa(mapa):
-    # Crear una nueva ventana para mostrar el mapa
-    ventana_mapa = tk.Toplevel()
-    ventana_mapa.title("Mapa Cargado")
+# Clase para manejar al agente
+class Agente:
+    def __init__(self, pos_x, pos_y, cell_size, mapa):
+        self.pos_x = pos_x
+        self.pos_y = pos_y
+        self.cell_size = cell_size
+        self.mapa = mapa
+
+    def mover(self, dx, dy):
+        nueva_x = self.pos_x + dx
+        nueva_y = self.pos_y + dy
+
+        # Verificar que el agente no se salga de los límites
+        if 0 <= nueva_x < len(self.mapa[0]) and 0 <= nueva_y < len(self.mapa):
+            self.pos_x = nueva_x
+            self.pos_y = nueva_y
+
+    def dibujar(self, screen):
+        # Dibujar al agente como un rectángulo rojo
+        pygame.draw.rect(screen, (255, 0, 0), pygame.Rect(self.pos_x * self.cell_size, self.pos_y * self.cell_size, self.cell_size, self.cell_size))
+
+# Función principal que ejecuta el bucle del juego
+def ejecutar_juego(mapa):
+    pygame.init()
     
-    #Editar la matriz
-    cell_size=30
+    # Tamaño de la celda
+    cell_size = 30
     num_filas = len(mapa)
-    num_columnas = len(mapa[0]) if num_filas > 0 else 0
-
-    #ajustar la ventana y la matriz
-    ventana_mapa.geometry(f"{(num_columnas + 1) * cell_size + 100}x{(num_filas + 1) * cell_size + 100}")
+    num_columnas = len(mapa[0])
     
-    # Configurar columnas y filas adicionales para centrar el contenido
-    #ventana_mapa.grid_columnconfigure(0, weight=0)  
-    #ventana_mapa.grid_columnconfigure(num_columnas + 1, weight=0) 
-    #ventana_mapa.grid_rowconfigure(0, weight=0)  
-    #ventana_mapa.grid_rowconfigure(num_filas + 1, weight=0)  
+    # Crear la ventana de Pygame
+    screen = pygame.display.set_mode((num_columnas * cell_size, num_filas * cell_size))
+    pygame.display.set_caption("Mapa con Agente")
 
-    #Contenido ajustado 
-    for i in range(1, num_filas + 1):
-        ventana_mapa.grid_rowconfigure(i, weight=1)
-    for j in range(1, num_columnas + 1):
-        ventana_mapa.grid_columnconfigure(j, weight=1)
-   
-    #Fila superior (letas)
-    letras =[chr(i) for i in range(65, 65 + num_columnas)]
-    for j, letra in enumerate(letras):
-        label = tk.Label(ventana_mapa, text=letra, width=cell_size//17, height=cell_size//17,
-                             font=("Arial", 12), relief="solid", borderwidth=1)
-        label.grid(row=0, column=j + 1, sticky="nsew")
-        
-    #columna izquierda (numeros)
-    for i in range(num_filas):
-        label = tk.Label(ventana_mapa, text=str(i +1), width=cell_size//15, height=cell_size//15,
-                             font=("Arial", 12), relief="solid", borderwidth=1)
-        label.grid(row=i+1, column=0, sticky="nsew")
+    # Crear al agente en la posición inicial (0, 0)
+    agente = Agente(0, 0, cell_size, mapa)
 
-    
+    clock = pygame.time.Clock()
+    corriendo = True
 
-    #contenido de la matriz
-    for i, fila in enumerate(mapa):
-        for j, celda in enumerate(fila):
-            if celda == 0:
-                color ="gray"
-            elif celda ==1:
-                color ="white"
-            elif celda == 2:
-                color="blue"
-            elif celda == 3:
-                color="yellow"  
-            elif celda == 4:
-                color="green"  
-            else:
-                color="black"            
+    while corriendo:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                corriendo = False
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_UP:
+                    agente.mover(0, -1)
+                elif event.key == pygame.K_DOWN:
+                    agente.mover(0, 1)
+                elif event.key == pygame.K_LEFT:
+                    agente.mover(-1, 0)
+                elif event.key == pygame.K_RIGHT:
+                    agente.mover(1, 0)
 
-            label = tk.Label(ventana_mapa, text="",bg= color, width=cell_size//2, height=cell_size//2, 
-                             font=("Arial", 12), relief="solid", borderwidth=1)
-            label.grid(row=i + 1, column=j + 1, sticky="nsew")
-        
-       
+        # Dibujar mapa y agente
+        screen.fill((0, 0, 0))  # Fondo negro
+        dibujar_mapa(screen, mapa, cell_size)
+        agente.dibujar(screen)
 
-#Ventana principal 
-def crear_ventana():
-    window = tk.Tk()
-    window.title("Cargar Mapa")
-    window.geometry("350x350")
-    window.configure(background="#333333")
+        pygame.display.flip()
+        clock.tick(10)  # Controlar la velocidad del bucle
 
-    window.grid_columnconfigure(0, weight=1)
-    window.grid_columnconfigure(1, weight=1)
-    window.grid_rowconfigure(0, weight=1)
-    window.grid_rowconfigure(1, weight=1)
-    window.grid_rowconfigure(2, weight=1)
-
-    label = tk.Label(window, text="Selecciona archivo", bg="#333333", fg="#5659C3", font=("Arial", 15))
-    label.grid(row=0, column=0, columnspan=2, sticky="nsew")
-
-    # Crear botón para cargar el archivo
-    button_cargar = tk.Button(
-        window, text="Cargar archivo", command=seleccionar_archivo,
-        font=("Arial", 10), bg="#5659C3", fg="#FFFFFF", pady=10, padx=10
-    )
-    button_cargar.grid(row=1, column=0, columnspan=2, padx=20, pady=10)
-
-    # Iniciar el loop de la interfaz gráfica
-    window.mainloop()
+    pygame.quit()
 
 if __name__ == "__main__":
-    crear_ventana()
+    archivo = seleccionar_archivo()
+    if archivo:
+        delimitador = ',' if archivo.endswith('.csv') else ' '
+        mapa = cargar_mapa(archivo, delimitador)
+        if mapa:
+            ejecutar_juego(mapa)
