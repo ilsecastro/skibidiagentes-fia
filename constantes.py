@@ -1,6 +1,5 @@
 # constantes.py
 
-
 # Colores de los terrenos
 COLORES_TERRENO = {
     "mountain": (0, 0, 0),  # Negro
@@ -30,7 +29,6 @@ TERRENOS = {
     8: "meadow",
     9: "desert"
 }
-
 
 # Costos de movimiento para diferentes tipos de jugadores
 COSTOS_MOVIMIENTO = {
@@ -70,19 +68,13 @@ COSTOS_MOVIMIENTO = {
         "swamp": 5,
         "snow": 3
     }
+    
 }
 
-
-    #0: (0, 0, 0),           # Negro para Montaña
-    #1: (255, 228, 181),     # Tierra (naranja claro)
-    #2: (0, 0, 255),         # Azul para Agua
-    #3: (255, 255, 0),       # Amarillo para Arena
-    #4: (0, 128, 0),         # Verde oscuro para Bosque
-    #5: (128, 0, 128),       # Púrpura para Pantano
-    #6: (255, 255, 255),     # Blanco para Nieve
-    #7: (255, 165, 0),       # Naranja para Ciudad
-    #8: (0, 255, 255),       # Cyan para Pradera
-    #9: (255, 20, 147)       # Deep Pink para Desierto
-
-
-
+# Colores asociados a cada tipo de agente
+COLORES_AGENTES = {
+    "human": (0, 0, 255),      # Azul
+    "monkey": (255, 165, 0),   # Naranja
+    "octopus": (128, 0, 128),  # Púrpura
+    "sasquatch": (139, 69, 19) # Marrón
+}
