@@ -1,27 +1,16 @@
 import pygame
-import tkinter as tk
-import constantes
-from tkinter import simpledialog, messagebox
+
 from constantes import COLORES_TERRENO, TERRENOS, COSTOS_MOVIMIENTO
 from Mapa import Mapa
-from Mapa import colores
 from Agente import Agente
 
-
 class GameManager:
-    def __init__(self, archivo_mapa, delimitador, cell_size=30, sidebar_width=500, tipo_agente="human"):
+    def __init__(self, archivo_mapa, delimitador, cell_size=30, sidebar_width=400, tipo_agente="human"):
         """
         Inicializa el GameManager con el archivo de mapa proporcionado.
         """
-        self.TERRENOS_DISPONIBLES = ["mountain", "earth", "water", "sand", "forest", "swamp", "snow", "city", "meadow", "desert"]
-        self.TERRENOS = {}  # Inicializa como un diccionario vacío
-        self.COSTOS_MOVIMIENTO = {
-            "human": {},
-            "monkey": {},
-            "octopus": {},
-            "sasquatch": {}
-        }
-
+        self.TERRENOS_DISPONIBLES = TERRENOS.values()
+        self.TERRENOS = {} 
         self.cell_size = cell_size
         self.sidebar_width = sidebar_width
         self.tipo_agente = tipo_agente
@@ -96,7 +85,6 @@ class GameManager:
                     pygame.draw.rect(self.screen, color, pygame.Rect(
                         x * self.cell_size, y * self.cell_size, self.cell_size, self.cell_size
                     ))
-
         if self.modo_edicion:
         # Indicar el terreno seleccionado en el mouse para facilitar la edición
             mouse_pos = pygame.mouse.get_pos()
@@ -104,7 +92,7 @@ class GameManager:
             if celda_x is not None and celda_y is not None:
              pygame.draw.rect(self.screen, (255, 255, 0), pygame.Rect(
              celda_x * self.cell_size, celda_y * self.cell_size, self.cell_size, self.cell_size
-             ), 2)  # Borde amarillo para la celda seleccionada        
+             ), 2)  # Borde amarillo para la celda seleccionada     
 
     def ejecutar_juego(self):
         """
@@ -121,7 +109,6 @@ class GameManager:
                     self.manejar_eventos_teclado(event)
                 elif event.type == pygame.MOUSEBUTTONDOWN:
                     self.manejar_eventos_mouse(event)
-                    
 
             # Dibujar todo
             self.screen.fill((0, 0, 0))  # Fondo negro
@@ -171,7 +158,21 @@ class GameManager:
         elif event.key == pygame.K_8:
             self.terreno_seleccionado = 8  # Pradera
         elif event.key == pygame.K_9:
-            self.terreno_seleccionado = 9  # Desierto                 
+            self.terreno_seleccionado = 9  # Desierto 
+
+        # Cambiar el tipo de agente
+        elif event.key == pygame.K_h:  # Cambiar a "human"
+            self.tipo_agente = "human"
+            self.actualizar_agente()
+        elif event.key == pygame.K_m:  # Cambiar a "monkey"
+            self.tipo_agente = "monkey"
+            self.actualizar_agente()
+        elif event.key == pygame.K_o:  # Cambiar a "octopus"
+            self.tipo_agente = "octopus"
+            self.actualizar_agente()
+        elif event.key == pygame.K_s:  # Cambiar a "sasquatch"
+            self.tipo_agente = "sasquatch"
+            self.actualizar_agente()
 
         # Mover agente si no estamos en modo edición
         if not self.modo_edicion:
@@ -211,10 +212,14 @@ class GameManager:
         elif event.button == 1 and self.boton_guardar.collidepoint(mouse_pos):
             self.mapa.guardar_mapa("mapa_guardado.csv")
             print("Mapa guardado correctamente.")
+        
 
-        #Detectar clic en boton agregar terreno 
-        if event.button == 1 and self.boton_agregar_terreno.collidepoint(mouse_pos):
-         self.capturar_datos_terreno()
+    def actualizar_agente(self):
+        """
+        Actualiza el agente con el nuevo tipo seleccionado.
+        """
+        x, y = self.agente.pos_x, self.agente.pos_y  # Mantener la posición actual
+        self.agente = Agente(x, y, self.cell_size, self.mapa.matriz, self.tipo_agente)
 
 
     def mostrar_puntos_inicio_fin(self):
@@ -233,8 +238,6 @@ class GameManager:
                 x_fin * self.cell_size, y_fin * self.cell_size, self.cell_size, self.cell_size
             ), 2)  # Borde rojo para el punto de fin
 
-
-
     def mostrar_sidebar(self):
         """
         Muestra el sidebar con las instrucciones y opciones de edición.
@@ -249,9 +252,14 @@ class GameManager:
             f"Modo Vista Sensores: {'ON' if self.modo_vista_sensores else 'OFF'} - Presiona 'V'",
             f"Modo Selección de Puntos: {'ON' if self.modo_seleccion_puntos else 'OFF'} - Presiona 'P'",
             f"Terreno seleccionado: {self.terreno_seleccionado}",
-            "Teclas: Seleccione el número que le corresponde al terreno",
-            "Seleccione inicio con clic izquierdo, fin con clic derecho",
+            "Teclas: 1 (Tierra), 2 (Agua), 3 (Arena),",
+            "4 (Bosque), 0 (Montaña)",
+            "Seleccione inicio con clic izquierdo, ",
+            "fin con clic derecho",
             "Guardar mapa: Haga clic en el botón",
+            f"Agente seleccionado: {self.tipo_agente} ",
+            "(Presiona 'H' - Human, 'M' - Monkey,", 
+            "'O' - Octopus, 'S' - Sasquatch)",
             "Terrenos disponibles:"
         ]
 
@@ -277,85 +285,11 @@ class GameManager:
 
         # Definir la posición vertical para los botones
         y_offset = self.screen.get_height() - 60  # Ajusta esta posición según necesites
-
+        
         # Botón para guardar el mapa
         self.boton_guardar = pygame.Rect(self.screen.get_width() - self.sidebar_width + 50, y_offset, 150, 30)
         pygame.draw.rect(self.screen, (100, 100, 255), self.boton_guardar)
         label_guardar = self.font.render("Guardar Mapa", True, (255, 255, 255))
         self.screen.blit(label_guardar, (self.boton_guardar.x + 15, self.boton_guardar.y + 5))
 
-        # Botón para agregar terreno (colocarlo a la derecha del botón de guardar)
-        self.boton_agregar_terreno = pygame.Rect(self.boton_guardar.right + 20, y_offset, 150, 30)  # Ajusta el espaciado si es necesario
-        pygame.draw.rect(self.screen, (100, 200, 100), self.boton_agregar_terreno)
-        label_agregar = self.font.render("Agregar Terreno", True, (255, 255, 255))
-        self.screen.blit(label_agregar, (self.boton_agregar_terreno.x + 15, self.boton_agregar_terreno.y + 5))
-
-    def agregar_terreno(self, nombre, costo):
-        """
-        Agrega un nuevo tipo de terreno al juego.
-        - `nombre`: El nombre del nuevo terreno (string).
-        - `costo`: Un diccionario con los costos de movimiento para cada tipo de jugador.
-        """
-        try:
-            # Verificar si el terreno ya ha sido agregado antes
-            if nombre in self.TERRENOS.values():
-                print(f"El terreno '{nombre}' ya existe.")
-                return   
-            
-
-            # Añadir el terreno a `self.TERRENOS` (usando un ID único para cada terreno)
-            nuevo_id = len(self.TERRENOS)  # El nuevo ID es el siguiente número disponible
-            self.TERRENOS[nuevo_id] = nombre
-                
-            for jugador in self.COSTOS_MOVIMIENTO:
-                self.COSTOS_MOVIMIENTO[jugador][nombre] = costo.get(jugador, None)
-
-            print(f"Nuevo terreno '{nombre}' agregado exitosamente.")
-            
-        except Exception as e:
-            print(f"Ocurrió un error al agregar el terreno: {e}")
-
-    def actualizar_sidebar(self, nombre_terreno):
-        """
-        Actualiza el sidebar para mostrar el terreno agregado por el usuario.
-        """
-        # Aquí iría el código para actualizar el sidebar con el terreno seleccionado
-        # por ejemplo, añadiendo el nombre del terreno a una lista visible.
-        print(f"Terreno '{nombre_terreno}' añadido al sidebar.")
-
-    def capturar_datos_terreno(self):
-            try:
-                root = tk.Tk()
-                root.withdraw()
-
-                # Mostrar una lista de los terrenos predefinidos para que el usuario seleccione uno.
-                nombre_terreno = simpledialog.askstring(
-                    "Seleccionar Terreno",
-                    f"Selecciona un terreno:\n{', '.join(self.TERRENOS_DISPONIBLES)}"
-                )
-                
-                if not nombre_terreno or nombre_terreno not in self.TERRENOS_DISPONIBLES:
-                    messagebox.showerror("Error", "Debes seleccionar un terreno válido.")
-                    return
-
-                # Capturar costos de movimiento para cada tipo de jugador
-                costo = {}
-                costo["human"] = simpledialog.askinteger("Costo Humano", "Introduce el costo de movimiento para el humano (o deja vacío):", initialvalue=1)
-                costo["monkey"] = simpledialog.askinteger("Costo Mono", "Introduce el costo de movimiento para el mono (o deja vacío):", initialvalue=1)
-                costo["octopus"] = simpledialog.askinteger("Costo Pulpo", "Introduce el costo de movimiento para el pulpo (o deja vacío):", initialvalue=1)
-                costo["sasquatch"] = simpledialog.askinteger("Costo Sasquatch", "Introduce el costo de movimiento para el Sasquatch (o deja vacío):", initialvalue=1)
-
-                # Validar costos
-                costo = {k: (v if v is not None else None) for k, v in costo.items()}
-
-                # Llamar a la función para agregar el terreno
-                self.agregar_terreno(nombre_terreno, costo)
-
-                # Solo después de agregarlo, actualizar el sidebar
-                self.actualizar_sidebar(nombre_terreno)
-
-                # Cerrar ventana de Tkinter
-                root.destroy()
-
-            except Exception as e:
-                print(f"Ocurrió un error al capturar los datos del terreno: {e}")
+    
