@@ -1,27 +1,20 @@
 import pygame
-import tkinter as tk
-import constantes
-from tkinter import simpledialog, messagebox
+
 from constantes import COLORES_TERRENO, TERRENOS, COSTOS_MOVIMIENTO
 from Mapa import Mapa
-from Mapa import colores
 from Agente import Agente
+from BFS import bfs_decision_por_decision_con_arbol
+from BFS import bfs_paso_a_paso_con_arbol
+from anytree import RenderTree
 
 
 class GameManager:
-    def __init__(self, archivo_mapa, delimitador, cell_size=30, sidebar_width=500, tipo_agente="human"):
+    def __init__(self, archivo_mapa, delimitador, cell_size=30, sidebar_width=400, tipo_agente="human"):
         """
         Inicializa el GameManager con el archivo de mapa proporcionado.
         """
-        self.TERRENOS_DISPONIBLES = ["mountain", "earth", "water", "sand", "forest", "swamp", "snow", "city", "meadow", "desert"]
-        self.TERRENOS = {}  # Inicializa como un diccionario vacío
-        self.COSTOS_MOVIMIENTO = {
-            "human": {},
-            "monkey": {},
-            "octopus": {},
-            "sasquatch": {}
-        }
-
+        self.TERRENOS_DISPONIBLES = TERRENOS.values()
+        self.TERRENOS = {} 
         self.cell_size = cell_size
         self.sidebar_width = sidebar_width
         self.tipo_agente = tipo_agente
@@ -53,11 +46,6 @@ class GameManager:
         Dibuja el mapa dependiendo del modo de visualización.
         """
         if self.modo_vista_sensores:
-
-            """
-            Por hacer: Copiar esa logica para que la matriz de conocimiento recuerde el tipo de terreno que visitó
-            """
-
             # Mostrar solo las celdas visitadas y las detectadas por los sensores
             for y, fila in enumerate(self.agente.conocimiento):
                 for x, celda_info in enumerate(fila):
@@ -67,6 +55,20 @@ class GameManager:
                         pygame.draw.rect(self.screen, color, pygame.Rect(
                             x * self.cell_size, y * self.cell_size, self.cell_size, self.cell_size
                         ))
+                        
+                        # Dibujar 'V' en las casillas visitadas
+                        text = self.font.render('V', True, (0, 0, 0))  # Color negro
+                        text_rect = text.get_rect(center=(x * self.cell_size + self.cell_size // 2,
+                                                        y * self.cell_size + self.cell_size // 2))
+                        self.screen.blit(text, text_rect)
+                        
+                    # Verificar si es la posición de inicio
+                    if (x, y) == self.punto_inicio:
+                        # Dibujar 'I' en la posición de inicio
+                        text = self.font.render('I', True, (0, 0, 0))  # Color negro
+                        text_rect = text.get_rect(center=(x * self.cell_size + self.cell_size // 2,
+                                                        y * self.cell_size + self.cell_size // 2))
+                        self.screen.blit(text, text_rect)
 
             # Mostrar celdas detectadas por los sensores
             for direccion, valor in self.agente.sensores.items():
@@ -97,14 +99,30 @@ class GameManager:
                         x * self.cell_size, y * self.cell_size, self.cell_size, self.cell_size
                     ))
 
+                    # Verificar si es la posición de inicio
+                    if (x, y) == self.punto_inicio:
+                        # Dibujar 'I' en la posición de inicio
+                        text = self.font.render('I', True, (0, 0, 0))  # Color negro
+                        text_rect = text.get_rect(center=(x * self.cell_size + self.cell_size // 2,
+                                                        y * self.cell_size + self.cell_size // 2))
+                        self.screen.blit(text, text_rect)
+                    # Verificar si la celda ha sido visitada
+                    elif "Visitado" in self.agente.conocimiento[y][x]["recorrido"]:
+                        # Dibujar 'V' en las casillas visitadas
+                        text = self.font.render('V', True, (0, 0, 0))  # Color negro
+                        text_rect = text.get_rect(center=(x * self.cell_size + self.cell_size // 2,
+                                                        y * self.cell_size + self.cell_size // 2))
+                        self.screen.blit(text, text_rect)
+
         if self.modo_edicion:
-        # Indicar el terreno seleccionado en el mouse para facilitar la edición
+            # Indicar el terreno seleccionado en el mouse para facilitar la edición
             mouse_pos = pygame.mouse.get_pos()
             celda_x, celda_y = self.mapa.detectar_celda(mouse_pos)
             if celda_x is not None and celda_y is not None:
-             pygame.draw.rect(self.screen, (255, 255, 0), pygame.Rect(
-             celda_x * self.cell_size, celda_y * self.cell_size, self.cell_size, self.cell_size
-             ), 2)  # Borde amarillo para la celda seleccionada        
+                pygame.draw.rect(self.screen, (255, 255, 0), pygame.Rect(
+                    celda_x * self.cell_size, celda_y * self.cell_size, self.cell_size, self.cell_size
+                ), 2)  # Borde amarillo para la celda seleccionada
+
 
     def ejecutar_juego(self):
         """
@@ -121,7 +139,6 @@ class GameManager:
                     self.manejar_eventos_teclado(event)
                 elif event.type == pygame.MOUSEBUTTONDOWN:
                     self.manejar_eventos_mouse(event)
-                    
 
             # Dibujar todo
             self.screen.fill((0, 0, 0))  # Fondo negro
@@ -171,7 +188,21 @@ class GameManager:
         elif event.key == pygame.K_8:
             self.terreno_seleccionado = 8  # Pradera
         elif event.key == pygame.K_9:
-            self.terreno_seleccionado = 9  # Desierto                 
+            self.terreno_seleccionado = 9  # Desierto 
+
+        # Cambiar el tipo de agente
+        elif event.key == pygame.K_h:  # Cambiar a "human"
+            self.tipo_agente = "human"
+            self.actualizar_agente()
+        elif event.key == pygame.K_m:  # Cambiar a "monkey"
+            self.tipo_agente = "monkey"
+            self.actualizar_agente()
+        elif event.key == pygame.K_o:  # Cambiar a "octopus"
+            self.tipo_agente = "octopus"
+            self.actualizar_agente()
+        elif event.key == pygame.K_s:  # Cambiar a "sasquatch"
+            self.tipo_agente = "sasquatch"
+            self.actualizar_agente()
 
         # Mover agente si no estamos en modo edición
         if not self.modo_edicion:
@@ -183,6 +214,33 @@ class GameManager:
                 self.agente.mover(-1, 0)
             elif event.key == pygame.K_RIGHT:
                 self.agente.mover(1, 0)
+
+
+
+
+
+        # Si presiona la tecla 'R', resolver en modo paso a paso
+        if event.key == pygame.K_r:
+            print("Tecla 'R' presionada: Resolviendo en modo paso a paso...")
+            self.resolver_laberinto(modo='paso_a_paso')
+
+        # Si presiona la tecla 'D', resolver en modo decisión por decisión
+        elif event.key == pygame.K_d:
+            print("Tecla 'D' presionada: Resolviendo en modo decisión por decisión...")
+            self.resolver_laberinto(modo='decision_por_decision')
+
+        # Si presiona la tecla 'T', mostrar el árbol generado (si ya existe)
+        elif event.key == pygame.K_t:
+            if hasattr(self, 'arbol'):  # Verificar si ya existe un árbol generado
+                print("Tecla 'T' presionada: Mostrando el árbol...")
+                for pre, fill, node in RenderTree(self.arbol):
+                    print(f"{pre}{node.name}")
+            else:
+                print("No se ha generado ningún árbol todavía.")
+
+                
+
+
 
     def manejar_eventos_mouse(self, event):
         """
@@ -211,10 +269,14 @@ class GameManager:
         elif event.button == 1 and self.boton_guardar.collidepoint(mouse_pos):
             self.mapa.guardar_mapa("mapa_guardado.csv")
             print("Mapa guardado correctamente.")
+        
 
-        #Detectar clic en boton agregar terreno 
-        if event.button == 1 and self.boton_agregar_terreno.collidepoint(mouse_pos):
-         self.capturar_datos_terreno()
+    def actualizar_agente(self):
+        """
+        Actualiza el agente con el nuevo tipo seleccionado.
+        """
+        x, y = self.agente.pos_x, self.agente.pos_y  # Mantener la posición actual
+        self.agente = Agente(x, y, self.cell_size, self.mapa.matriz, self.tipo_agente)
 
 
     def mostrar_puntos_inicio_fin(self):
@@ -233,8 +295,6 @@ class GameManager:
                 x_fin * self.cell_size, y_fin * self.cell_size, self.cell_size, self.cell_size
             ), 2)  # Borde rojo para el punto de fin
 
-
-
     def mostrar_sidebar(self):
         """
         Muestra el sidebar con las instrucciones y opciones de edición.
@@ -249,9 +309,14 @@ class GameManager:
             f"Modo Vista Sensores: {'ON' if self.modo_vista_sensores else 'OFF'} - Presiona 'V'",
             f"Modo Selección de Puntos: {'ON' if self.modo_seleccion_puntos else 'OFF'} - Presiona 'P'",
             f"Terreno seleccionado: {self.terreno_seleccionado}",
-            "Teclas: Seleccione el número que le corresponde al terreno",
-            "Seleccione inicio con clic izquierdo, fin con clic derecho",
+            "Teclas: 1 (Tierra), 2 (Agua), 3 (Arena),",
+            "4 (Bosque), 0 (Montaña)",
+            "Seleccione inicio con clic izquierdo, ",
+            "fin con clic derecho",
             "Guardar mapa: Haga clic en el botón",
+            f"Agente seleccionado: {self.tipo_agente} ",
+            "(Presiona 'H' - Human, 'M' - Monkey,", 
+            "'O' - Octopus, 'S' - Sasquatch)",
             "Terrenos disponibles:"
         ]
 
@@ -277,85 +342,31 @@ class GameManager:
 
         # Definir la posición vertical para los botones
         y_offset = self.screen.get_height() - 60  # Ajusta esta posición según necesites
-
+        
         # Botón para guardar el mapa
         self.boton_guardar = pygame.Rect(self.screen.get_width() - self.sidebar_width + 50, y_offset, 150, 30)
         pygame.draw.rect(self.screen, (100, 100, 255), self.boton_guardar)
         label_guardar = self.font.render("Guardar Mapa", True, (255, 255, 255))
         self.screen.blit(label_guardar, (self.boton_guardar.x + 15, self.boton_guardar.y + 5))
 
-        # Botón para agregar terreno (colocarlo a la derecha del botón de guardar)
-        self.boton_agregar_terreno = pygame.Rect(self.boton_guardar.right + 20, y_offset, 150, 30)  # Ajusta el espaciado si es necesario
-        pygame.draw.rect(self.screen, (100, 200, 100), self.boton_agregar_terreno)
-        label_agregar = self.font.render("Agregar Terreno", True, (255, 255, 255))
-        self.screen.blit(label_agregar, (self.boton_agregar_terreno.x + 15, self.boton_agregar_terreno.y + 5))
 
-    def agregar_terreno(self, nombre, costo):
-        """
-        Agrega un nuevo tipo de terreno al juego.
-        - `nombre`: El nombre del nuevo terreno (string).
-        - `costo`: Un diccionario con los costos de movimiento para cada tipo de jugador.
-        """
-        try:
-            # Verificar si el terreno ya ha sido agregado antes
-            if nombre in self.TERRENOS.values():
-                print(f"El terreno '{nombre}' ya existe.")
-                return   
-            
+ 
 
-            # Añadir el terreno a `self.TERRENOS` (usando un ID único para cada terreno)
-            nuevo_id = len(self.TERRENOS)  # El nuevo ID es el siguiente número disponible
-            self.TERRENOS[nuevo_id] = nombre
-                
-            for jugador in self.COSTOS_MOVIMIENTO:
-                self.COSTOS_MOVIMIENTO[jugador][nombre] = costo.get(jugador, None)
 
-            print(f"Nuevo terreno '{nombre}' agregado exitosamente.")
-            
-        except Exception as e:
-            print(f"Ocurrió un error al agregar el terreno: {e}")
+    def resolver_laberinto(self, modo='paso_a_paso'):
+        if self.punto_inicio and self.punto_fin:
+            if modo == 'paso_a_paso':
+                camino, arbol = bfs_paso_a_paso_con_arbol(self.mapa.matriz, self.punto_inicio, self.punto_fin, self)
+            elif modo == 'decision_por_decision':
+                camino, arbol = bfs_decision_por_decision_con_arbol(self.mapa.matriz, self.punto_inicio, self.punto_fin, self)
 
-    def actualizar_sidebar(self, nombre_terreno):
-        """
-        Actualiza el sidebar para mostrar el terreno agregado por el usuario.
-        """
-        # Aquí iría el código para actualizar el sidebar con el terreno seleccionado
-        # por ejemplo, añadiendo el nombre del terreno a una lista visible.
-        print(f"Terreno '{nombre_terreno}' añadido al sidebar.")
+            if camino:
+                print("Camino encontrado:", camino)
+                self.arbol = arbol  # Aquí se guarda el árbol generado
 
-    def capturar_datos_terreno(self):
-            try:
-                root = tk.Tk()
-                root.withdraw()
-
-                # Mostrar una lista de los terrenos predefinidos para que el usuario seleccione uno.
-                nombre_terreno = simpledialog.askstring(
-                    "Seleccionar Terreno",
-                    f"Selecciona un terreno:\n{', '.join(self.TERRENOS_DISPONIBLES)}"
-                )
-                
-                if not nombre_terreno or nombre_terreno not in self.TERRENOS_DISPONIBLES:
-                    messagebox.showerror("Error", "Debes seleccionar un terreno válido.")
-                    return
-
-                # Capturar costos de movimiento para cada tipo de jugador
-                costo = {}
-                costo["human"] = simpledialog.askinteger("Costo Humano", "Introduce el costo de movimiento para el humano (o deja vacío):", initialvalue=1)
-                costo["monkey"] = simpledialog.askinteger("Costo Mono", "Introduce el costo de movimiento para el mono (o deja vacío):", initialvalue=1)
-                costo["octopus"] = simpledialog.askinteger("Costo Pulpo", "Introduce el costo de movimiento para el pulpo (o deja vacío):", initialvalue=1)
-                costo["sasquatch"] = simpledialog.askinteger("Costo Sasquatch", "Introduce el costo de movimiento para el Sasquatch (o deja vacío):", initialvalue=1)
-
-                # Validar costos
-                costo = {k: (v if v is not None else None) for k, v in costo.items()}
-
-                # Llamar a la función para agregar el terreno
-                self.agregar_terreno(nombre_terreno, costo)
-
-                # Solo después de agregarlo, actualizar el sidebar
-                self.actualizar_sidebar(nombre_terreno)
-
-                # Cerrar ventana de Tkinter
-                root.destroy()
-
-            except Exception as e:
-                print(f"Ocurrió un error al capturar los datos del terreno: {e}")
+                # Mostrar el árbol en la consola
+                print("Árbol de decisiones generado:")
+                for pre, _, node in RenderTree(arbol):
+                    print(f"{pre}{node.name}")
+            else:
+                print("No se encontró ningún camino")

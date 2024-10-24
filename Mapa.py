@@ -2,20 +2,6 @@ import csv
 import pygame
 
 
-colores = {
-        
-    0: (0, 0, 0),           # Negro para Montaña
-    1: (255, 228, 181),     # Tierra (naranja claro)
-    2: (0, 0, 255),         # Azul para Agua
-    3: (255, 255, 0),       # Amarillo para Arena
-    4: (0, 128, 0),         # Verde oscuro para Bosque
-    5: (128, 0, 128),       # Púrpura para Pantano
-    6: (255, 255, 255),     # Blanco para Nieve
-    7: (255, 165, 0),       # Naranja para Ciudad
-    8: (0, 255, 255),       # Cyan para Pradera
-    9: (255, 20, 147)       # Deep Pink para Desierto
-    }
-
 class Mapa:
     def __init__(self, cell_size: int) -> None:
         self.matriz = []
@@ -78,7 +64,6 @@ class Mapa:
         """
         if 0 <= pos_x < len(self.matriz[0]) and 0 <= pos_y < len(self.matriz):
             self.matriz[pos_y][pos_x] = valor
-            
 
 
 """
@@ -88,6 +73,15 @@ if __name__ == "__main__":
     pygame.init()
     screen = pygame.display.set_mode((800, 600))
     pygame.display.set_caption("Mapa")
+
+    # Configuración de colores para los diferentes terrenos
+    colores = {
+        0: (128, 128, 128),  # Gris para montaña
+        1: (255, 255, 255),  # Blanco para tierra
+        2: (0, 0, 255),      # Azul para agua
+        3: (255, 255, 0),    # Amarillo para arena
+        4: (0, 255, 0),      # Verde para bosque
+    }
 
     # Tamaño de la celda
     cell_size = 30
@@ -107,7 +101,7 @@ if __name__ == "__main__":
     celda_x, celda_y = mi_mapa.detectar_celda(mouse_pos)
 
     # Modificar una celda
-    mi_mapa.modificar_celda(celda_x, celda_y, )  # Cambiar a terreno de agua
+    mi_mapa.modificar_celda(celda_x, celda_y, 3)  # Cambiar a terreno de agua
 
     # Guardar el mapa actualizado
     mi_mapa.guardar_mapa('mapa_actualizado.csv')

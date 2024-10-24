@@ -22,6 +22,5 @@ def main():
     # Ejecutar el bucle principal del juego
     gestor.ejecutar_juego()
 
-
 if __name__ == "__main__":
     main()
