@@ -1,5 +1,5 @@
 from collections import deque
-from anytree import Node, RenderTree
+from anytree import Node
 import pygame
 
 def bfs_decision_por_decision_con_arbol(mapa, punto_inicio, punto_fin, game_manager):

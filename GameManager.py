@@ -5,6 +5,7 @@ from Mapa import Mapa
 from Agente import Agente
 from BFS import bfs_decision_por_decision_con_arbol
 from BFS import bfs_paso_a_paso_con_arbol
+from AlgoritmoA import a_estrella_con_arbol
 from anytree import RenderTree
 
 
@@ -219,12 +220,12 @@ class GameManager:
 
 
 
-        # Si presiona la tecla 'R', resolver en modo paso a paso
+        # Si presiona la tecla 'R', resolver en modo paso a paso (BFS)
         if event.key == pygame.K_r:
             print("Tecla 'R' presionada: Resolviendo en modo paso a paso...")
             self.resolver_laberinto(modo='paso_a_paso')
 
-        # Si presiona la tecla 'D', resolver en modo decisión por decisión
+        # Si presiona la tecla 'D', resolver en modo decisión por decisión (BFS)
         elif event.key == pygame.K_d:
             print("Tecla 'D' presionada: Resolviendo en modo decisión por decisión...")
             self.resolver_laberinto(modo='decision_por_decision')
@@ -233,12 +234,16 @@ class GameManager:
         elif event.key == pygame.K_t:
             if hasattr(self, 'arbol'):  # Verificar si ya existe un árbol generado
                 print("Tecla 'T' presionada: Mostrando el árbol...")
-                for pre, fill, node in RenderTree(self.arbol):
+                for pre, _, node in RenderTree(self.arbol):
                     print(f"{pre}{node.name}")
             else:
                 print("No se ha generado ningún árbol todavía.")
-
-                
+      
+      #Para A*
+        if event.key == pygame.K_a:
+                print("Iniciando A*")
+                self.resolver_con_a_estrella()
+                        
 
 
 
@@ -364,9 +369,32 @@ class GameManager:
                 print("Camino encontrado:", camino)
                 self.arbol = arbol  # Aquí se guarda el árbol generado
 
+
                 # Mostrar el árbol en la consola
                 print("Árbol de decisiones generado:")
                 for pre, _, node in RenderTree(arbol):
                     print(f"{pre}{node.name}")
             else:
                 print("No se encontró ningún camino")
+
+
+#Para algoritmo A*
+    def resolver_con_a_estrella(self):
+        camino, arbol = a_estrella_con_arbol(self.mapa.matriz, self.punto_inicio, self.punto_fin, self.agente, self)
+        if camino:
+            print("Camino encontrado:", camino)
+            print("Árbol de decisiones generado:")
+            for pre, _, node in RenderTree(arbol):
+                print(f"{pre}{node.name}")
+        else:
+            print("No se encontró ningún camino")
+
+
+    def obtener_costo_terreno(self, agente, tipo_terreno):
+        tipo_agente = agente.tipo_agente  
+        # Consultar el costo de movimiento para el tipo de agente y el tipo de terreno
+        if tipo_agente in COSTOS_MOVIMIENTO and tipo_terreno in COSTOS_MOVIMIENTO[tipo_agente]:
+            costo = COSTOS_MOVIMIENTO[tipo_agente][tipo_terreno]
+            # Si el costo es None, el terreno no es accesible para este agente
+            return float('inf') if costo is None else costo
+        return float('inf')  # Terreno inaccesible si no está definido
